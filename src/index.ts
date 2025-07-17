@@ -24,7 +24,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: CLIENT_ORIGIN,
-    credentials: true, // allow cookies
+    credentials: true,
   })
 );
 app.use(express.json());
@@ -122,9 +122,33 @@ app.get("/verify-token", (req: Request, res: Response) => {
   }
 });
 
+app.get("/Profile", async (req: Request, res: Response) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    res.sendStatus(401);
+    return;
+  }
+
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      user.email,
+    ]);
+
+    console.log(result.rows[0]);
+
+    res.status(201).json({ email: result.rows[0].email });
+    return;
+  } catch {
+    res.sendStatus(401);
+    return;
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
 });
 
 //TODO: Log out
 //TODO: Expiration token handling ?
+//TODO: strict CSRF ??
