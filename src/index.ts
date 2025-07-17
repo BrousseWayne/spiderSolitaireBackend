@@ -106,13 +106,8 @@ app.post("/register", async (req: Request, res: Response) => {
 });
 
 app.get("/verify-token", (req: Request, res: Response) => {
-  console.log("Wtf ??????????");
-  console.log(new Date().toISOString());
   const token = req.cookies?.token;
-  console.log(req.cookies);
-  console.log(token);
   if (!token) {
-    console.log("no Token ?");
     res.sendStatus(401);
     return;
   }
@@ -130,3 +125,6 @@ app.get("/verify-token", (req: Request, res: Response) => {
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
 });
+
+//TODO: Log out
+//TODO: Expiration token handling ?
