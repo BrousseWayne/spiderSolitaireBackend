@@ -6,20 +6,29 @@ import { Pool } from "pg";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import cookieParser from "cookie-parser";
 
 dotenv.config({ path: "/Users/samy/Projects/spiderBackend/conf.env" });
 
-const PORT = process.env.PORT;
-const app = express();
-const SALT_ROUNDS = 10;
+dotenv.config();
 
-const corsOption = {
-  origin: ["http://localhost:5173"],
-};
+//TODO: match cookie expiration with token expiration
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const SALT_ROUNDS = 10;
+const JWT_SECRET = process.env.JWT_SECRET!;
+const CLIENT_ORIGIN = "http://localhost:5173";
 
 app.use(helmet());
-app.use(cors(corsOption));
+app.use(
+  cors({
+    origin: CLIENT_ORIGIN,
+    credentials: true, // allow cookies
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 const pool = new Pool();
 
@@ -31,7 +40,7 @@ app.post("/login", async (req: Request, res: Response) => {
     ]);
 
     if (result.rows.length === 0) {
-      res.status(401).json({ error: "Invalid credential" });
+      res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
@@ -39,11 +48,11 @@ app.post("/login", async (req: Request, res: Response) => {
     const match = await bcrypt.compare(password, user.password);
 
     if (!match) {
-      res.status(401).json({ error: "Invalid credential" });
+      res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
-    const jwtSecret: string | undefined = process.env.JWT_SECRET;
+    const jwtSecret: string | undefined = JWT_SECRET;
     if (!jwtSecret) {
       res.status(500).json({ error: "Server misconfiguration" });
       return;
@@ -53,7 +62,14 @@ app.post("/login", async (req: Request, res: Response) => {
       expiresIn: "2h",
     });
 
-    res.json({ token });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 2 * 60 * 60 * 1000,
+    });
+
+    res.json({ message: "Login successful" });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -86,6 +102,28 @@ app.post("/register", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Register error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/verify-token", (req: Request, res: Response) => {
+  console.log("Wtf ??????????");
+  console.log(new Date().toISOString());
+  const token = req.cookies?.token;
+  console.log(req.cookies);
+  console.log(token);
+  if (!token) {
+    console.log("no Token ?");
+    res.sendStatus(401);
+    return;
+  }
+
+  try {
+    jwt.verify(token, JWT_SECRET);
+    res.sendStatus(200);
+    return;
+  } catch {
+    res.sendStatus(401);
+    return;
   }
 });
 
