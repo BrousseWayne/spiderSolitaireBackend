@@ -24,49 +24,69 @@ app.use(express.json());
 const pool = new Pool();
 
 app.post("/login", async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-    email,
-  ]);
+  try {
+    const { email, password } = req.body;
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
 
-  if (result.rows.length === 0) {
-    res.status(401).json({ error: "Invalid credential" });
-    return;
+    if (result.rows.length === 0) {
+      res.status(401).json({ error: "Invalid credential" });
+      return;
+    }
+
+    const user = result.rows[0];
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
+      res.status(401).json({ error: "Invalid credential" });
+      return;
+    }
+
+    const jwtSecret: string | undefined = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      res.status(500).json({ error: "Server misconfiguration" });
+      return;
+    }
+
+    const token = jwt.sign({ userId: user.id, email: user.email }, jwtSecret, {
+      expiresIn: "2h",
+    });
+
+    res.json({ token });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
-
-  const user = result.rows[0];
-  const match = await bcrypt.compare(password, user.password);
-
-  if (!match) {
-    res.status(401).json({ error: "Invalid credential" });
-    return;
-  }
-
-  const jwtSecret: string = process.env.JWT_SECRET!;
-
-  const token = jwt.sign({ userId: user.id, email: user.email }, jwtSecret, {
-    expiresIn: "2h",
-  });
-
-  res.json({ token });
 });
 
 app.post("/register", async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-    email,
-  ]);
+  try {
+    const { email, password } = req.body;
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
 
-  if (result.rows.length > 0) {
-    res.status(409).json({ error: "Email already used" });
-    return;
+    if (result.rows.length > 0) {
+      res.status(409).json({ error: "Email already used" });
+      return;
+    }
+
+    const hashedPass = await bcrypt.hash(password, SALT_ROUNDS);
+    const values = [email, hashedPass];
+    const text =
+      "INSERT INTO users(email, password) VALUES($1, $2) RETURNING *";
+
+    const insertedUser = await pool.query(text, values);
+
+    res.status(201).json({
+      message: "User registered",
+      user: insertedUser.rows[0].email,
+    });
+  } catch (error) {
+    console.error("Register error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
-
-  const hashedPass = await bcrypt.hash(password, SALT_ROUNDS);
-  const values = [email, hashedPass];
-  const text = "INSERT INTO users(email, password) VALUES($1, $2) RETURNING *";
-
-  await pool.query(text, values);
 });
 
 app.listen(PORT, () => {
