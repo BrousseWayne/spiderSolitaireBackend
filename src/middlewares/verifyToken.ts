@@ -1,13 +1,9 @@
-import { Response, NextFunction } from "express";
+import { type Response, type NextFunction, type Request } from "express";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "@/lib/conf";
-import { AuthenticatedRequest } from "@/types/authenticatedRequestType";
+import { JWT_SECRET } from "../lib/conf.ts";
+import { type AuthenticatedRequest } from "../types/authenticatedRequestType.ts";
 
-export function verifyToken(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-) {
+export function verifyToken(req: Request, res: Response, next: NextFunction) {
   const token = req.cookies?.token;
   if (!token) {
     res.sendStatus(401);
@@ -19,7 +15,7 @@ export function verifyToken(
       email: string;
       userId: number;
     };
-    req.user = decoded;
+    (req as AuthenticatedRequest).user = decoded;
     next();
   } catch {
     res.sendStatus(401);

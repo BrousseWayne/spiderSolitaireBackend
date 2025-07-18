@@ -1,6 +1,9 @@
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 
-export default async function sendMail(sendTo: string, resetLink: string) {
+export default async function sendPasswordRecoveryMail(
+  sendTo: string,
+  resetLink: string
+) {
   const mailerSend = new MailerSend({
     apiKey: process.env.MAIL_API!,
   });

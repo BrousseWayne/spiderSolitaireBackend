@@ -2,8 +2,8 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { PORT, CLIENT_ORIGIN } from "@/lib/conf";
-import routes from "./routes";
+import { PORT, CLIENT_ORIGIN } from "./lib/conf.ts";
+import routes from "./routes/index.ts";
 
 const app = express();
 

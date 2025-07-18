@@ -1,8 +1,8 @@
-import { Request, Response } from "express";
+import { type Request, type Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { pool } from "@/lib/db";
-import { JWT_SECRET, SALT_ROUNDS } from "@/lib/conf";
+import { pool } from "../lib/db.ts";
+import { JWT_SECRET, SALT_ROUNDS } from "../lib/conf.ts";
 
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;

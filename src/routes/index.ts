@@ -1,6 +1,6 @@
 import { Router } from "express";
-import authRoutes from "./auth";
-import profileRoutes from "./profile";
+import authRoutes from "./auth.ts";
+import profileRoutes from "./profile.ts";
 
 const router = Router();
 
