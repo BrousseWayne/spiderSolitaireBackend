@@ -73,12 +73,12 @@ export default async function sendPasswordRecoveryMail(
         <div class="paragraph">
           You have requested to reset your password. Click the button below to proceed. If you didn't make this request, you can safely ignore this email.
         </div>
-        <a href="${resetLink}" class="button" target="_blank" rel="noopener noreferrer">Reset Password</a>
+        <a href="http://localhost:5173/password-reset?token=${resetLink}" class="button" target="_blank" rel="noopener noreferrer">Reset Password</a>
         <div class="paragraph" style="margin-top: 24px">
           Or copy and paste the following link into your browser:
         </div>
-        <div class="code">${resetLink}</div>
-        <div class="footer">This link will expire in 1 hour.</div>
+        <div class="code">http://localhost:5173/password-reset?token=${resetLink}</div>
+        <div class="footer">This link will expire in 20 minutes.</div>
       </div>
     </body>
   </html>
