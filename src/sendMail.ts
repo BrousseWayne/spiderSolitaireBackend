@@ -8,7 +8,7 @@ export default async function sendPasswordRecoveryMail(
     apiKey: process.env.MAIL_API!,
   });
 
-  const sentFrom = new Sender(process.env.SENDER_DOMAIN!, "Your name");
+  const sentFrom = new Sender(process.env.SENDER_DOMAIN!, "Spidy Soli");
 
   const recipients = [new Recipient(sendTo, "Your Client")];
 

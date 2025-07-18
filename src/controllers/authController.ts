@@ -142,7 +142,7 @@ export async function resetPassword(req: Request, res: Response) {
   }
 
   const hashedPass = await bcrypt.hash(password, SALT_ROUNDS);
-  await pool.query("UPDATE users SET hashed_password = $1 WHERE email = $2", [
+  await pool.query("UPDATE users SET password = $1 WHERE email = $2", [
     hashedPass,
     decoded.email,
   ]);
