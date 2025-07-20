@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import bcrypt from "bcrypt";
-import jwt, { decode } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { pool } from "../lib/db.ts";
 import { JWT_SECRET, SALT_ROUNDS } from "../lib/conf.ts";
 import sendPasswordRecoveryMail from "../sendMail.ts";
@@ -21,6 +21,11 @@ export async function login(req: Request, res: Response) {
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+
+    if (user.verified !== true) {
+      res.json({ message: "Email not verified" });
       return;
     }
 
