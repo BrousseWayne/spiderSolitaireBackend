@@ -4,6 +4,7 @@ import {
   login,
   register,
   resetPassword,
+  verifyEmail,
   verifyToken,
 } from "../controllers/authController.ts";
 
@@ -13,6 +14,7 @@ router.post("/login", login);
 router.post("/register", register);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
+router.post("/verify-email", verifyEmail);
 router.get("/verify-token", verifyToken);
 
 export default router;

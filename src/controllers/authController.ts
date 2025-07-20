@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import jwt, { decode } from "jsonwebtoken";
 import { pool } from "../lib/db.ts";
 import { JWT_SECRET, SALT_ROUNDS } from "../lib/conf.ts";
 import sendPasswordRecoveryMail from "../sendMail.ts";
@@ -41,6 +41,7 @@ export async function login(req: Request, res: Response) {
     res.status(500).json({ error: "Server error" });
   }
 }
+
 export async function register(req: Request, res: Response) {
   const { email, password } = req.body;
   const result = await pool.query("SELECT * FROM users WHERE email = $1", [
@@ -113,6 +114,40 @@ export async function forgotPassword(req: Request, res: Response) {
     res.status(500).json({ error: "Internal server error" });
     return;
   }
+}
+
+export async function verifyEmail(req: Request, res: Response) {
+  const { token } = req.body;
+
+  if (!token) {
+    res.status(400).json({ error: "Missing token" });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET) as {
+      email: string;
+      userId: number;
+    };
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token" });
+    return;
+  }
+
+  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+    decoded.email,
+  ]);
+  if (result.rows.length === 0) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  await pool.query("UPDATE users SET verified = $1 WHERE email = $2", [
+    true,
+    decoded.email,
+  ]);
+
+  res.status(200).json({ message: "User verified" });
 }
 
 export async function resetPassword(req: Request, res: Response) {
