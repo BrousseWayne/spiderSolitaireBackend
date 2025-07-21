@@ -1,16 +1,15 @@
 import { type Request, type Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { pool } from "../lib/db.ts";
+import { pool, selectUsersByEmail } from "../lib/db.ts";
 import { JWT_SECRET, SALT_ROUNDS } from "../lib/conf.ts";
 import sendPasswordRecoveryMail from "../sendMail.ts";
+import sendPasswordVerificationMail from "../sendMail.ts";
 
 export async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+    const result = await pool.query(selectUsersByEmail, [email]);
 
     if (result.rows.length === 0) {
       res.status(401).json({ error: "Invalid credentials" });
@@ -25,7 +24,7 @@ export async function login(req: Request, res: Response) {
     }
 
     if (user.verified !== true) {
-      res.json({ message: "Email not verified" });
+      res.status(600).json({ message: "Email not verified" });
       return;
     }
 
@@ -49,9 +48,7 @@ export async function login(req: Request, res: Response) {
 
 export async function register(req: Request, res: Response) {
   const { email, password } = req.body;
-  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-    email,
-  ]);
+  const result = await pool.query(selectUsersByEmail, [email]);
 
   if (result.rows.length > 0) {
     res.status(409).json({ error: "Email already used" });
@@ -61,12 +58,58 @@ export async function register(req: Request, res: Response) {
   const hashedPass = await bcrypt.hash(password, SALT_ROUNDS);
   const values = [email, hashedPass];
   const text = "INSERT INTO users(email, password) VALUES($1, $2) RETURNING *";
-
   const insertedUser = await pool.query(text, values);
+
+  const token = jwt.sign({ email: email }, JWT_SECRET, {
+    expiresIn: "20M",
+  });
+
+  try {
+    // await sendPasswordVerificationMail(email, token);
+    await pool.query(
+      "UPDATE users SET last_attempted_verification = $1 WHERE email = $2",
+      [new Date(), email]
+    );
+
+    //TODO: verif timer since last verif email
+  } catch (err) {
+    console.error(err);
+  }
+
   res.status(201).json({
     message: "User registered",
     user: insertedUser.rows[0].email,
   });
+}
+
+export async function resendVerificationEmail(req: Request, res: Response) {
+  const { email } = req.body;
+  const result = await pool.query(selectUsersByEmail, [email]);
+
+  if (result.rows.length === 0) {
+    res.status(401).json({ error: "Invalid request" });
+    return;
+  }
+
+  const user = result.rows[0];
+  if (user.verified === true) {
+    res.status(400).json({ message: "Unexpected Error" });
+    return;
+  }
+
+  const token = jwt.sign({ email: email }, JWT_SECRET, {
+    expiresIn: "20M",
+  });
+
+  try {
+    await sendPasswordVerificationMail(email, token);
+    await pool.query(
+      "UPDATE users SET last_attempted_verification = $1 WHERE email = $2",
+      [new Date(), email]
+    );
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 export function verifyToken(req: Request, res: Response) {
@@ -95,9 +138,7 @@ export async function forgotPassword(req: Request, res: Response) {
   }
 
   try {
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+    const result = await pool.query(selectUsersByEmail, [email]);
 
     if (result.rows.length > 0) {
       const user = result.rows[0];
@@ -107,7 +148,11 @@ export async function forgotPassword(req: Request, res: Response) {
         { expiresIn: "20M" }
       );
 
-      await sendPasswordRecoveryMail(email, token);
+      try {
+        await sendPasswordRecoveryMail(email, token);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     res.status(200).json({
@@ -139,9 +184,7 @@ export async function verifyEmail(req: Request, res: Response) {
     return;
   }
 
-  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-    decoded.email,
-  ]);
+  const result = await pool.query(selectUsersByEmail, [decoded.email]);
   if (result.rows.length === 0) {
     res.status(404).json({ error: "User not found" });
     return;
@@ -173,9 +216,7 @@ export async function resetPassword(req: Request, res: Response) {
     return;
   }
 
-  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-    decoded.email,
-  ]);
+  const result = await pool.query(selectUsersByEmail, [decoded.email]);
   if (result.rows.length === 0) {
     res.status(404).json({ error: "User not found" });
     return;
@@ -188,4 +229,24 @@ export async function resetPassword(req: Request, res: Response) {
   ]);
 
   res.status(200).json({ message: "Password updated" });
+}
+
+export async function checkEmailVerification(req: Request, res: Response) {
+  const { email } = req.body;
+  if (typeof email !== "string") {
+    res.status(400).json({ error: "Email required" });
+    return;
+  }
+
+  const result = await pool.query(
+    "SELECT verified FROM users WHERE email = $1",
+    [email]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  res.json({ verified: result.rows[0].verified });
 }
