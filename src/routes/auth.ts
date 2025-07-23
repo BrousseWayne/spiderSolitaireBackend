@@ -3,6 +3,7 @@ import {
   checkEmailVerification,
   forgotPassword,
   login,
+  logout,
   register,
   resendVerificationEmail,
   resetPassword,
@@ -17,8 +18,9 @@ router.post("/register", register);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.post("/verify-email", verifyEmail);
-router.get("/verify-token", verifyToken);
 router.post("/email-verified", checkEmailVerification);
 router.post("/resend-verification-email", resendVerificationEmail);
+router.post("/logout", logout);
+router.get("/verify-token", verifyToken);
 
 export default router;

@@ -8,6 +8,21 @@ import sendPasswordVerificationMail from "../sendMail.ts";
 
 //TODO: Token expiration not handled
 
+export async function logout(req: Request, res: Response) {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== "dev",
+      sameSite: "lax",
+      path: "/",
+    });
+  } catch (err) {
+    console.error(err);
+  }
+
+  res.status(200).json({ message: "Logged out" });
+}
+
 export async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
@@ -32,7 +47,7 @@ export async function login(req: Request, res: Response) {
 
     const expiresIn = 2 * 60 * 60;
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn,
+      expiresIn: "1week",
     });
 
     res.cookie("token", token, {
@@ -40,6 +55,7 @@ export async function login(req: Request, res: Response) {
       secure: process.env.NODE_ENV !== "dev",
       sameSite: "lax",
       maxAge: expiresIn * 1000,
+      path: "/",
     });
 
     res.json({ message: "Login successful" });
@@ -72,8 +88,6 @@ export async function register(req: Request, res: Response) {
       "UPDATE users SET last_attempted_verification = $1 WHERE email = $2",
       [new Date(), email]
     );
-
-    //TODO: verif timer since last verif email
   } catch (err) {
     console.error(err);
   }
@@ -83,6 +97,9 @@ export async function register(req: Request, res: Response) {
     user: insertedUser.rows[0].email,
   });
 }
+
+//TODO: add nickname in db
+//TODO: add route to update profile
 
 export async function resendVerificationEmail(req: Request, res: Response) {
   const { email } = req.body;
@@ -116,6 +133,7 @@ export async function resendVerificationEmail(req: Request, res: Response) {
 
 export function verifyToken(req: Request, res: Response) {
   const token = req.cookies?.token;
+  // console.log(req);
 
   if (!token) {
     res.status(401).json({ error: "Token missing" });
