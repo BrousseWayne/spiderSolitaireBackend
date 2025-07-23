@@ -6,6 +6,8 @@ import { JWT_SECRET, SALT_ROUNDS } from "../lib/conf.ts";
 import sendPasswordRecoveryMail from "../sendMail.ts";
 import sendPasswordVerificationMail from "../sendMail.ts";
 
+//TODO: Token expiration not handled
+
 export async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
