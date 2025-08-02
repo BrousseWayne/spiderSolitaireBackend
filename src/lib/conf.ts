@@ -6,3 +6,4 @@ export const PORT = process.env.PORT || 3000;
 export const JWT_SECRET = process.env.JWT_SECRET!;
 export const SALT_ROUNDS = 10;
 export const CLIENT_ORIGIN = "http://localhost:5173";
+export const THROTTLE_EMAIL_VERIF = "5";

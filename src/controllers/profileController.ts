@@ -7,5 +7,21 @@ export async function getProfile(req: Request, res: Response) {
   const result = await pool.query("SELECT * FROM users WHERE email = $1", [
     user.email,
   ]);
-  res.status(200).json({ email: result.rows[0].email });
+
+  const { password, id, ...userWithoutPass } = result.rows[0];
+  res.status(200).json({ user: userWithoutPass });
+}
+
+export async function onboarding(req: Request, res: Response) {
+  const { nickname, default_game_mode, profile_picture } = req.body;
+  // const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+  //   user.email,
+  // ]);
+
+  console.log("nickname, default_game_mode, profile_picture");
+  console.log(nickname, default_game_mode, profile_picture);
+
+  // const { password, id, ...userWithoutPass } = result.rows[0];
+  // console.log(password, userWithoutPass);
+  // res.status(200).json({ user: userWithoutPass });
 }

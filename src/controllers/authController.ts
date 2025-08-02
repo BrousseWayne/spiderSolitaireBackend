@@ -2,7 +2,7 @@ import { type Request, type Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { pool, selectUsersByEmail } from "../lib/db.ts";
-import { JWT_SECRET, SALT_ROUNDS } from "../lib/conf.ts";
+import { JWT_SECRET, SALT_ROUNDS, THROTTLE_EMAIL_VERIF } from "../lib/conf.ts";
 import sendPasswordRecoveryMail from "../sendMail.ts";
 import sendPasswordVerificationMail from "../sendMail.ts";
 
@@ -83,7 +83,7 @@ export async function register(req: Request, res: Response) {
   });
 
   try {
-    // await sendPasswordVerificationMail(email, token);
+    await sendPasswordVerificationMail(email, token);
     await pool.query(
       "UPDATE users SET last_attempted_verification = $1 WHERE email = $2",
       [new Date(), email]
@@ -98,11 +98,15 @@ export async function register(req: Request, res: Response) {
   });
 }
 
+//TODO: prevent spamming
+
 //TODO: add nickname in db
 //TODO: add route to update profile
 
 export async function resendVerificationEmail(req: Request, res: Response) {
   const { email } = req.body;
+  console.log("HELLO IM HERE ??", email);
+
   const result = await pool.query(selectUsersByEmail, [email]);
 
   if (result.rows.length === 0) {
@@ -120,12 +124,24 @@ export async function resendVerificationEmail(req: Request, res: Response) {
     expiresIn: "20M",
   });
 
+  const elapsedTimeSinceLastVerification = user.last_attempted_verification;
+
+  console.log();
+
   try {
-    await sendPasswordVerificationMail(email, token);
-    await pool.query(
-      "UPDATE users SET last_attempted_verification = $1 WHERE email = $2",
-      [new Date(), email]
-    );
+    if (
+      (Math.abs(elapsedTimeSinceLastVerification - Date.now()) / 60000).toFixed(
+        0
+      ) === THROTTLE_EMAIL_VERIF
+    ) {
+      await sendPasswordVerificationMail(email, token);
+      await pool.query(
+        "UPDATE users SET last_attempted_verification = $1 WHERE email = $2",
+        [new Date(), email]
+      );
+    } else {
+      res.status(400).json({ message: "Too many attempts retry in 5 mins" });
+    }
   } catch (err) {
     console.error(err);
   }
@@ -133,7 +149,6 @@ export async function resendVerificationEmail(req: Request, res: Response) {
 
 export function verifyToken(req: Request, res: Response) {
   const token = req.cookies?.token;
-  // console.log(req);
 
   if (!token) {
     res.status(401).json({ error: "Token missing" });

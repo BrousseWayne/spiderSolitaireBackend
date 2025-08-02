@@ -17,8 +17,3 @@ app.use("/", routes);
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
 });
-
-//TODO: Log out
-//TODO: Expiration token handling ?
-//TODO: strict CSRF ??
-//TODO: Match cookie expiration
