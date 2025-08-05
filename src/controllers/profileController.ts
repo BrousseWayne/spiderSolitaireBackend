@@ -14,14 +14,21 @@ export async function getProfile(req: Request, res: Response) {
 
 export async function onboarding(req: Request, res: Response) {
   const { nickname, default_game_mode, profile_picture } = req.body;
-  // const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-  //   user.email,
-  // ]);
+  const { user } = req as AuthenticatedRequest;
 
-  console.log("nickname, default_game_mode, profile_picture");
+  const text =
+    "INSERT INTO stats(nickname, user_id, default_game_mode, profile_picture) VALUES($1, $2, $3, $4) RETURNING *";
+  await pool.query(text, [
+    nickname,
+    user.userId,
+    default_game_mode,
+    profile_picture,
+  ]);
+
+  await pool.query(
+    "UPDATE users SET hascompletedonboarding = $1 WHERE email = $2",
+    [true, user.email]
+  );
+
   console.log(nickname, default_game_mode, profile_picture);
-
-  // const { password, id, ...userWithoutPass } = result.rows[0];
-  // console.log(password, userWithoutPass);
-  // res.status(200).json({ user: userWithoutPass });
 }

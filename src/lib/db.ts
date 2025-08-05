@@ -34,7 +34,6 @@ export const createDatabase = async () => {
         has_default_mode BOOLEAN DEFAULT false
       );
     `);
-    console.log(stats);
   } catch (err) {
     console.error(err);
   }
@@ -42,5 +41,4 @@ export const createDatabase = async () => {
 
 (async () => {
   await createDatabase();
-  console.log("done");
 })();

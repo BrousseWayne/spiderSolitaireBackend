@@ -105,7 +105,6 @@ export async function register(req: Request, res: Response) {
 
 export async function resendVerificationEmail(req: Request, res: Response) {
   const { email } = req.body;
-  console.log("HELLO IM HERE ??", email);
 
   const result = await pool.query(selectUsersByEmail, [email]);
 
